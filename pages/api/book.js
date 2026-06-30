@@ -1,70 +1,111 @@
 import { createClient } from '@supabase/supabase-js'
-import moyasar from 'moyasar'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 )
 
-moyasar.init({ secret_key: process.env.MOYASAR_SECRET_KEY })
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end()
-  
-  const { name, phone, tripId, seats, type } = req.body
-  const apiSecret = req.headers['x-api-secret']
-  
-  // التحقق من المفتاح السري
-  if (apiSecret !== process.env.API_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' })
+  // ===== تتبع حجز (GET) =====
+  if (req.method === 'GET') {
+    const { id } = req.query
+    if (!id) return res.status(400).json({ error: 'رقم الحجز مطلوب' })
+
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('booking_id', id)
+        .single()
+
+      if (error || !data) {
+        return res.status(404).json({ error: 'الحجز غير موجود' })
+      }
+
+      return res.status(200).json({ booking: data })
+    } catch (e) {
+      console.error('❌ book GET error:', e.message)
+      return res.status(500).json({ error: 'تعذر جلب بيانات الحجز' })
+    }
   }
 
-  try {
-    // 1. إنشاء الحجز في Supabase
-    const { data: trip } = await supabase.from('trips').select('*').eq('id', tripId).single()
-    if (!trip) return res.status(404).json({ error: 'الرحلة غير موجودة' })
+  // ===== إنشاء حجز (POST) =====
+  if (req.method === 'POST') {
+    const { name, phone, tripId, seats, type } = req.body
 
-    const seatCol = type === 'VIP' ? 'vip_seats' : 'seats'
-    const available = trip[seatCol]
-    if (available < seats) return res.status(400).json({ error: `المقاعد ${type} المتبقية: ${available}` })
+    // تحقق أساسي
+    if (!name || !phone || !tripId || !seats) {
+      return res.status(400).json({ error: 'جميع الحقول مطلوبة' })
+    }
 
-    const price = type === 'VIP' ? Math.round(trip.price * 1.5) : trip.price
-    const total = price * seats
-    const bookingId = 'BK' + Date.now()
+    const seatCount = parseInt(seats)
+    if (isNaN(seatCount) || seatCount < 1) {
+      return res.status(400).json({ error: 'عدد المقاعد غير صالح' })
+    }
 
-    const { error: bookError } = await supabase.from('bookings').insert({
-      booking_id: bookingId,
-      customer_name: name,
-      customer_phone: phone,
-      trip_id: tripId,
-      from_city: trip.from_city,
-      to_city: trip.to_city,
-      date: trip.date,
-      time: trip.time,
-      seats_booked: seats,
-      seat_type: type,
-      price_per_seat: price,
-      total_price: total,
-      status: 'معلق'
-    })
-    if (bookError) throw bookError
+    const seatType = type === 'VIP' ? 'VIP' : 'عادي'
 
-    // 2. إنشاء فاتورة Moyasar
-    const invoice = await moyasar.invoices.create({
-      amount: total * 100, // هللة
-      currency: 'SAR',
-      description: `حجز ${bookingId}`,
-      callback_url: `${process.env.BASE_URL}/success`,
-      metadata: { bookingId }
-    })
+    try {
+      // 1. جلب الرحلة
+      const { data: trip, error: tripError } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('id', tripId)
+        .single()
 
-    res.status(200).json({
-      success: true,
-      paymentUrl: invoice.url,
-      bookingId
-    })
+      if (tripError || !trip) {
+        return res.status(404).json({ error: 'الرحلة غير موجودة' })
+      }
 
-  } catch (e) {
-    res.status(500).json({ error: e.message })
+      // 2. تحقق من المقاعد
+      const seatCol = seatType === 'VIP' ? 'vip_seats' : 'seats'
+      const available = trip[seatCol] || 0
+      if (available < seatCount) {
+        return res.status(400).json({ error: `المقاعد ${seatType} المتبقية: ${available} فقط` })
+      }
+
+      // 3. احسب السعر
+      const pricePerSeat = seatType === 'VIP' ? Math.round(trip.price * 1.5) : trip.price
+      const total = pricePerSeat * seatCount
+      const bookingId = 'BK' + Date.now()
+
+      // 4. أدخل الحجز
+      const { error: bookError } = await supabase.from('bookings').insert({
+        booking_id: bookingId,
+        customer_name: name,
+        customer_phone: phone,
+        trip_id: tripId,
+        from_city: trip.from_city,
+        to_city: trip.to_city,
+        date: trip.date,
+        time: trip.time,
+        seats_booked: seatCount,
+        seat_type: seatType,
+        price_per_seat: pricePerSeat,
+        total_price: total,
+        status: 'مؤكد'
+      })
+
+      if (bookError) throw bookError
+
+      // 5. نقص المقاعد
+      await supabase
+        .from('trips')
+        .update({ [seatCol]: available - seatCount })
+        .eq('id', tripId)
+
+      return res.status(200).json({
+        success: true,
+        bookingId,
+        totalPrice: total,
+        message: `تم الحجز بنجاح! رقم الحجز: ${bookingId}`
+      })
+    } catch (e) {
+      console.error('❌ book POST error:', e.message)
+      return res.status(500).json({ error: 'فشل إنشاء الحجز' })
+    }
   }
+
+  // طرق أخرى غير مدعومة
+  return res.status(405).json({ error: 'Method not allowed' })
 }

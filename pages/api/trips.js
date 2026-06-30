@@ -6,15 +6,28 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   try {
-    const { data, error } = await supabase
+    const { from, to, date } = req.query
+    let query = supabase
       .from('trips')
       .select('*')
       .eq('status', 'متاحة')
       .or('seats.gt.0,vip_seats.gt.0')
+
+    if (from) query = query.eq('from_city', from)
+    if (to) query = query.eq('to_city', to)
+    if (date) query = query.eq('date', date)
+
+    const { data, error } = await query
     if (error) throw error
-    res.status(200).json(data)
+
+    res.status(200).json(data || [])
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('❌ trips API error:', e.message)
+    res.status(500).json({ error: 'تعذر جلب الرحلات' })
   }
 }
