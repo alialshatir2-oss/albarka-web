@@ -5,17 +5,6 @@ const CITIES = [
   'صنعاء', 'الحديدة', 'ذمار', 'البيضاء', 'المكلا', 'عدن', 'تعز المدينة', 'تعز الحوبان', 'إب'
 ]
 
-const INITIAL_TRIPS = [
-  { id: 1, from_city: 'الرياض', to_city: 'صنعاء', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 2, from_city: 'جده', to_city: 'عدن', date: '2026-07-04', time: '11:00', price: 450, seats: 25, vip_seats: 8 },
-  { id: 3, from_city: 'الدمام', to_city: 'الحديدة', date: '2026-07-05', time: '11:00', price: 550, seats: 28, vip_seats: 12 },
-  { id: 4, from_city: 'صنعاء', to_city: 'جده', date: '2026-07-06', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 5, from_city: 'الرياض', to_city: 'إب', date: '2026-07-06', time: '11:00', price: 480, seats: 22, vip_seats: 6 },
-  { id: 6, from_city: 'جده', to_city: 'صنعاء', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 7, from_city: 'صنعاء', to_city: 'الرياض', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 8, from_city: 'مكه', to_city: 'الحديدة', date: '2026-07-04', time: '11:00', price: 450, seats: 25, vip_seats: 8 },
-]
-
 export default function Home() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
@@ -25,7 +14,7 @@ export default function Home() {
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [passenger, setPassenger] = useState({ name: '', phone: '', seats: '1' })
 
-  function handleSearch() {
+  async function handleSearch() {
     if (!form.from || !form.to || !form.date) {
       setMessage('يرجى ملء جميع الحقول')
       return
@@ -33,16 +22,15 @@ export default function Home() {
     setLoading(true)
     setMessage('')
     
-    setTimeout(() => {
-      const results = INITIAL_TRIPS.filter(t => 
-        t.from_city === form.from && 
-        t.to_city === form.to && 
-        t.date === form.date
-      )
-      setTrips(results)
+    try {
+      const res = await fetch(`/api/trips?from=${form.from}&to=${form.to}&date=${form.date}`)
+      const data = await res.json()
+      setTrips(data)
       setStep('results')
-      setLoading(false)
-    }, 300)
+    } catch (e) {
+      setMessage('تعذر الاتصال بقاعدة البيانات')
+    }
+    setLoading(false)
   }
 
   function handleBook() {
@@ -95,7 +83,11 @@ export default function Home() {
                   <div>
                     <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{trip.from_city} → {trip.to_city}</div>
                     <div>📅 {trip.date} | ⏰ {trip.time}</div>
-                    <div style={{ color: '#0e5e4c', fontWeight: 'bold' }}>{trip.price} ريال</div>
+                    <div style={{ color: '#0e5e4c', fontWeight: 'bold' }}>
+                      {trip.price} ريال
+                      {trip.vip_seats > 0 && <span> | 👑 VIP: {Math.round(trip.price * 1.5)} ريال</span>}
+                    </div>
+                    <div>🪑 عادي: {trip.seats} | 👑 VIP: {trip.vip_seats}</div>
                   </div>
                   <button onClick={() => { setSelectedTrip(trip); setStep('booking') }} style={{ padding: '10px 20px', background: '#0e5e4c', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
                     احجز الآن
@@ -117,7 +109,8 @@ export default function Home() {
             <div style={{ background: '#f0f8f4', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
               <p><strong>الرحلة:</strong> {selectedTrip.from_city} → {selectedTrip.to_city}</p>
               <p><strong>التاريخ:</strong> {selectedTrip.date} | ⏰ {selectedTrip.time}</p>
-              <p><strong>الإجمالي التقريبي:</strong> {selectedTrip.price * parseInt(passenger.seats)} ريال</p>
+              <p><strong>النوع:</strong> {form.type}</p>
+              <p><strong>الإجمالي التقريبي:</strong> {form.type === 'VIP' ? Math.round(selectedTrip.price * 1.5) * parseInt(passenger.seats) : selectedTrip.price * parseInt(passenger.seats)} ريال</p>
             </div>
             <button onClick={handleBook} style={{ width: '100%', padding: '12px', marginTop: '15px', background: '#0e5e4c', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px' }}>
               🎫 تأكيد الحجز
