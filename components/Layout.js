@@ -1,17 +1,18 @@
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 
-export default function Layout({ children, showBack = false }) {
+export default function Layout({ children, showBack = false, activeStep = 0 }) {
   const router = useRouter()
+  const steps = ['🔍 البحث', '🚌 الرحلات', '👤 البيانات', '✅ تأكيد']
 
   return (
     <>
       <nav className="navbar">
         <div className="container">
-          <Link href="/" style={{ fontWeight: 'bold', fontSize: '20px', color: '#0e5e4c', textDecoration: 'none' }}>
-            🚌 البركة للنقل
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '22px', color: '#0e5e4c', textDecoration: 'none' }}>
+            <span>🚌</span> البركة
           </Link>
-          <div>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <Link href="/">الرئيسية</Link>
             <Link href="/track">تتبع الحجز</Link>
             <Link href="/contact">اتصل بنا</Link>
@@ -19,18 +20,27 @@ export default function Layout({ children, showBack = false }) {
         </div>
       </nav>
 
-      <div className="container" style={{ marginTop: '30px', marginBottom: '30px', minHeight: '60vh' }}>
+      <div className="container" style={{ marginTop: '40px', marginBottom: '40px', minHeight: '60vh' }}>
         {showBack && (
           <button onClick={() => router.back()} className="back-btn">
             ⬅️ رجوع
           </button>
         )}
+        {activeStep > 0 && (
+          <div className="steps">
+            {steps.map((s, i) => (
+              <span key={i} className={`step ${i + 1 === activeStep ? 'active' : ''}`}>{s}</span>
+            ))}
+          </div>
+        )}
         {children}
       </div>
 
-      <footer style={{ textAlign: 'center', padding: '30px', background: '#1e293b', color: '#cbd5e1', marginTop: '40px' }}>
-        © 2026 البركة للنقل الجماعي. جميع الحقوق محفوظة.
-        <br/>📞 966566480912
+      <footer>
+        <div className="container">
+          <p style={{ fontWeight: 'bold', color: '#0e5e4c', marginBottom: '5px' }}>🚌 البركة للنقل الجماعي</p>
+          <p>© 2026 جميع الحقوق محفوظة | 📞 966566480912</p>
+        </div>
       </footer>
     </>
   )
