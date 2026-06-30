@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Layout from '../components/Layout'
 
 export default function Track() {
   const [bookingId, setBookingId] = useState('')
@@ -21,19 +22,30 @@ export default function Track() {
   }
 
   return (
-    <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', fontFamily: 'Cairo' }}>
-      <h1>🔍 تتبع الحجز</h1>
-      <input placeholder="رقم الحجز" value={bookingId} onChange={e => setBookingId(e.target.value)} />
-      <button onClick={track} style={{ padding: '10px', background: '#0e5e4c', color: 'white', border: 'none', borderRadius: '5px' }}>بحث</button>
-      {message && <p>{message}</p>}
-      {booking && (
-        <div className="card">
-          <p>🎫 رقم الحجز: {booking.booking_id}</p>
-          <p>🚌 {booking.from_city} → {booking.to_city}</p>
-          <p>📅 {booking.date} | ⏰ {booking.time}</p>
-          <p>الحالة: {booking.status}</p>
-        </div>
-      )}
-    </div>
+    <Layout showBack>
+      <div className="card" style={{ maxWidth: '500px', margin: '0 auto' }}>
+        <h2 style={{ color: '#0e5e4c', marginBottom: '20px' }}>🔍 تتبع الحجز</h2>
+        <input
+          placeholder="أدخل رقم الحجز"
+          value={bookingId}
+          onChange={e => setBookingId(e.target.value)}
+        />
+        <button className="btn" onClick={track} style={{ width: '100%' }}>
+          بحث
+        </button>
+        {message && <p style={{ marginTop: '15px', color: 'red' }}>{message}</p>}
+        {booking && (
+          <div className="card" style={{ marginTop: '20px', background: '#f0f8f4' }}>
+            <p><strong>🎫 رقم الحجز:</strong> {booking.booking_id}</p>
+            <p><strong>🚌 الرحلة:</strong> {booking.from_city} → {booking.to_city}</p>
+            <p><strong>📅 التاريخ:</strong> {booking.date} | <strong>⏰</strong> {booking.time}</p>
+            <p><strong>👤 الاسم:</strong> {booking.customer_name}</p>
+            <p><strong>💺 المقاعد:</strong> {booking.seats_booked} ({booking.seat_type})</p>
+            <p><strong>💰 السعر:</strong> {booking.total_price} ريال</p>
+            <p><strong>📌 الحالة:</strong> {booking.status}</p>
+          </div>
+        )}
+      </div>
+    </Layout>
   )
 }
