@@ -5,24 +5,16 @@ const CITIES = [
   'صنعاء', 'الحديدة', 'ذمار', 'البيضاء', 'المكلا', 'عدن', 'تعز المدينة', 'تعز الحوبان', 'إب'
 ]
 
-const INITIAL_TRIPS = [
-  { id: 1, from_city: 'الرياض', to_city: 'صنعاء', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 2, from_city: 'جده', to_city: 'عدن', date: '2026-07-04', time: '11:00', price: 450, seats: 25, vip_seats: 8 },
-  { id: 3, from_city: 'الدمام', to_city: 'الحديدة', date: '2026-07-05', time: '11:00', price: 550, seats: 28, vip_seats: 12 },
-  { id: 4, from_city: 'صنعاء', to_city: 'الرياض', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
-  { id: 5, from_city: 'الرياض', to_city: 'إب', date: '2026-07-06', time: '11:00', price: 480, seats: 22, vip_seats: 6 },
-]
-
 export default function Home() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [step, setStep] = useState('search') // search | results | booking | confirm
+  const [step, setStep] = useState('search')
   const [form, setForm] = useState({ from: '', to: '', date: '', type: 'عادي' })
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [passenger, setPassenger] = useState({ name: '', phone: '', seats: '1' })
 
-  function handleSearch() {
+  async function handleSearch() {
     if (!form.from || !form.to || !form.date) {
       setMessage('يرجى ملء جميع الحقول')
       return
@@ -30,17 +22,15 @@ export default function Home() {
     setLoading(true)
     setMessage('')
     
-    // بحث في الرحلات المحلية (ويمكن استبداله بـ API لاحقاً)
-    setTimeout(() => {
-      const results = INITIAL_TRIPS.filter(t => 
-        t.from_city === form.from && 
-        t.to_city === form.to && 
-        t.date === form.date
-      )
-      setTrips(results)
+    try {
+      const res = await fetch(`/api/trips?from=${form.from}&to=${form.to}&date=${form.date}`)
+      const data = await res.json()
+      setTrips(data)
       setStep('results')
-      setLoading(false)
-    }, 500)
+    } catch (e) {
+      setMessage('تعذر الاتصال بقاعدة البيانات')
+    }
+    setLoading(false)
   }
 
   function handleBook() {
@@ -51,14 +41,12 @@ export default function Home() {
 
   return (
     <div style={{ fontFamily: 'Cairo, Tahoma, sans-serif', background: 'white', minHeight: '100vh', direction: 'rtl' }}>
-      {/* هيدر */}
       <header style={{ background: '#0e5e4c', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '20px' }}>🚌 البركة للنقل</h1>
         <span style={{ fontSize: '14px' }}>ALBARAKA</span>
       </header>
 
       <div style={{ maxWidth: '650px', margin: '30px auto', padding: '0 15px' }}>
-        {/* محرك البحث */}
         {step === 'search' && (
           <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 15px rgba(0,0,0,0.05)', border: '1px solid #e0e0e0' }}>
             <h2 style={{ color: '#0e5e4c', marginBottom: '15px' }}>🔍 اختر رحلتك</h2>
@@ -84,7 +72,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* نتائج البحث */}
         {step === 'results' && (
           <div>
             <h2 style={{ color: '#0e5e4c' }}>🚌 رحلات {form.from} → {form.to}</h2>
@@ -107,7 +94,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* بيانات المسافر */}
         {step === 'booking' && selectedTrip && (
           <div style={{ background: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #e0e0e0' }}>
             <h2 style={{ color: '#0e5e4c' }}>👤 بيانات المسافر</h2>
@@ -127,7 +113,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* تأكيد */}
         {step === 'confirm' && (
           <div style={{ textAlign: 'center', background: 'white', borderRadius: '12px', padding: '30px', border: '1px solid #e0e0e0' }}>
             <h2>🎉 شكراً لك!</h2>
