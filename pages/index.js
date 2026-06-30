@@ -5,6 +5,17 @@ const CITIES = [
   'صنعاء', 'الحديدة', 'ذمار', 'البيضاء', 'المكلا', 'عدن', 'تعز المدينة', 'تعز الحوبان', 'إب'
 ]
 
+const INITIAL_TRIPS = [
+  { id: 1, from_city: 'الرياض', to_city: 'صنعاء', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
+  { id: 2, from_city: 'جده', to_city: 'عدن', date: '2026-07-04', time: '11:00', price: 450, seats: 25, vip_seats: 8 },
+  { id: 3, from_city: 'الدمام', to_city: 'الحديدة', date: '2026-07-05', time: '11:00', price: 550, seats: 28, vip_seats: 12 },
+  { id: 4, from_city: 'صنعاء', to_city: 'جده', date: '2026-07-06', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
+  { id: 5, from_city: 'الرياض', to_city: 'إب', date: '2026-07-06', time: '11:00', price: 480, seats: 22, vip_seats: 6 },
+  { id: 6, from_city: 'جده', to_city: 'صنعاء', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
+  { id: 7, from_city: 'صنعاء', to_city: 'الرياض', date: '2026-07-03', time: '11:00', price: 500, seats: 30, vip_seats: 10 },
+  { id: 8, from_city: 'مكه', to_city: 'الحديدة', date: '2026-07-04', time: '11:00', price: 450, seats: 25, vip_seats: 8 },
+]
+
 export default function Home() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
@@ -14,7 +25,7 @@ export default function Home() {
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [passenger, setPassenger] = useState({ name: '', phone: '', seats: '1' })
 
-  async function handleSearch() {
+  function handleSearch() {
     if (!form.from || !form.to || !form.date) {
       setMessage('يرجى ملء جميع الحقول')
       return
@@ -22,15 +33,16 @@ export default function Home() {
     setLoading(true)
     setMessage('')
     
-    try {
-      const res = await fetch(`/api/trips?from=${form.from}&to=${form.to}&date=${form.date}`)
-      const data = await res.json()
-      setTrips(data)
+    setTimeout(() => {
+      const results = INITIAL_TRIPS.filter(t => 
+        t.from_city === form.from && 
+        t.to_city === form.to && 
+        t.date === form.date
+      )
+      setTrips(results)
       setStep('results')
-    } catch (e) {
-      setMessage('تعذر الاتصال بقاعدة البيانات')
-    }
-    setLoading(false)
+      setLoading(false)
+    }, 300)
   }
 
   function handleBook() {
