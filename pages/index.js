@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 
 export default function Home() {
   const [trips, setTrips] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({
     name: '',
@@ -18,12 +19,18 @@ export default function Home() {
 
   async function fetchTrips() {
     setLoading(true)
+    setError('')
     try {
       const res = await fetch('/api/trips')
+      if (!res.ok) throw new Error('فشل تحميل الرحلات')
       const data = await res.json()
-      setTrips(data)
+      if (Array.isArray(data)) {
+        setTrips(data)
+      } else {
+        setError('البيانات المستلمة غير صالحة')
+      }
     } catch (e) {
-      setMessage('خطأ في الاتصال')
+      setError('تعذر الاتصال بقاعدة البيانات. تأكد من إعداد المتغيرات.')
     }
     setLoading(false)
   }
@@ -31,8 +38,6 @@ export default function Home() {
   async function handleBook(e) {
     e.preventDefault()
     setMessage('جاري إرسال طلبك...')
-    
-    // حالياً: حجز مباشر بدون دفع فوري
     try {
       const res = await fetch('/api/book', {
         method: 'POST',
@@ -53,7 +58,6 @@ export default function Home() {
 
   return (
     <div style={{ background: '#f5f5f5', minHeight: '100vh', fontFamily: 'Tahoma, sans-serif' }}>
-      {/* الهيدر */}
       <div style={{ background: '#0e3b2e', color: 'white', padding: '20px', textAlign: 'center' }}>
         <h1 style={{ margin: 0 }}>🚌 شركة البركة للنقل الجماعي</h1>
         <p style={{ margin: '5px 0 0' }}>حجز الرحلات بين المدن اليمنية والسعودية</p>
@@ -64,7 +68,11 @@ export default function Home() {
         {/* قسم الرحلات */}
         <div style={{ background: 'white', borderRadius: '8px', padding: '20px', marginBottom: '20px' }}>
           <h2 style={{ color: '#0e3b2e', borderBottom: '2px solid #0e3b2e', paddingBottom: '10px' }}>الرحلات المتاحة</h2>
-          {loading ? <p>جاري التحميل...</p> : (
+          
+          {loading && <p>⏳ جاري تحميل الرحلات...</p>}
+          {error && <p style={{ color: 'red' }}>❌ {error}</p>}
+          
+          {!loading && !error && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                 <thead>
@@ -73,12 +81,12 @@ export default function Home() {
                     <th style={{ padding: '10px' }}>المسار</th>
                     <th style={{ padding: '10px' }}>التاريخ</th>
                     <th style={{ padding: '10px' }}>الوقت</th>
-                    <th style={{ padding: '10px' }}>السعر (عادي)</th>
+                    <th style={{ padding: '10px' }}>السعر</th>
                     <th style={{ padding: '10px' }}>المقاعد</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {trips.map((t, i) => (
+                  {trips.length > 0 ? trips.map((t, i) => (
                     <tr key={t.id} style={{ background: i % 2 === 0 ? '#f9f9f9' : 'white' }}>
                       <td style={{ padding: '10px' }}>{t.id}</td>
                       <td style={{ padding: '10px' }}>{t.from_city} → {t.to_city}</td>
@@ -87,8 +95,7 @@ export default function Home() {
                       <td style={{ padding: '10px' }}>{t.price} ريال</td>
                       <td style={{ padding: '10px' }}>{t.seats}</td>
                     </tr>
-                  ))}
-                  {trips.length === 0 && !loading && (
+                  )) : (
                     <tr><td colSpan="6" style={{ padding: '20px', color: '#888' }}>لا توجد رحلات متاحة حالياً</td></tr>
                   )}
                 </tbody>
@@ -122,7 +129,6 @@ export default function Home() {
           {message && <p style={{ marginTop: '15px', padding: '10px', background: '#e8f5e9', borderRadius: '5px', color: '#0e3b2e' }}>{message}</p>}
         </div>
 
-        {/* تذييل */}
         <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
           <p>© 2026 شركة البركة للنقل الجماعي. جميع الحقوق محفوظة.</p>
           <p>📞 للتواصل: 966566480912</p>
